@@ -1,0 +1,65 @@
+name: Weekly SAM.gov update
+
+on:
+  schedule:
+    # Mondays 11:17 UTC = 7:17 a.m. Eastern (EDT) / 6:17 a.m. (EST)
+    - cron: "17 11 * * 1"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild outputs even if nothing significant changed"
+        type: boolean
+        default: false
+      backfill:
+        description: "Re-scan every archive year since the start date"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: weekly-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download, classify, compare
+        id: run
+        run: |
+          args=""
+          if [ "${{ inputs.force }}" = "true" ]; then args="$args --force"; fi
+          if [ "${{ inputs.backfill }}" = "true" ]; then args="$args --backfill"; fi
+          python scripts/update.py $args
+
+      - name: Commit if changed
+        if: steps.run.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/notices.csv docs/data.json
+          if git diff --cached --quiet; then
+            echo "No file changes to commit."
+          else
+            git commit -m "Weekly SAM.gov update $(date -u +%F)"
+            git push
+          fi
+
+      - name: Open alert issue
+        if: hashFiles('alert.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "New FedRAMP/IL/FISMA language on SAM.gov – week of $(date -u +%F)" \
+            --body-file alert.md

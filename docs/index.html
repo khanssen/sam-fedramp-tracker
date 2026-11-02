@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FedRAMP in SAM.gov</title>
+<meta name="description" content="How federal contract notices on SAM.gov describe FedRAMP, FISMA, DoD impact levels, and cloud requirements since FedRAMP 20x was announced. Updated weekly.">
+<style>
+:root{
+  --bg:#f7f7f5;--panel:#ffffff;--ink:#1d1d1b;--muted:#6b6b66;--line:#e4e3de;--accent:#2f5bd3;
+  --b0:#d6336c;--b1:#2f5bd3;--b2:#6c8fe8;--b3:#2b9a77;--b4:#c98a1b;--b5:#9b59b6;--b6:#b9b39f;--b7:#d9d6cc;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--muted:#a3a29b;--line:#2f2e2b;--accent:#7f9cf0;
+    --b0:#f06595;--b1:#6f8ff0;--b2:#9db3f5;--b3:#4cc79d;--b4:#e5ac45;--b5:#c08ad6;--b6:#77746a;--b7:#4a4842;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:18px;margin:0 0 12px}
+.sub{color:var(--muted);margin:0 0 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin:0 0 18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:0 0 18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .v{font-size:28px;font-weight:650;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:8px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.chart{width:100%;overflow-x:auto}
+svg text{fill:var(--muted);font-size:11px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.controls input[type=search],.controls select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);max-width:100%}
+.controls label{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+td.n{white-space:nowrap;font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;white-space:nowrap;color:#fff}
+.tags{color:var(--muted);font-size:12px}
+.snip{color:var(--muted);font-size:12.5px;margin-top:3px}
+.bars div{display:grid;grid-template-columns:110px 1fr 40px;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+.bars .track{background:var(--line);border-radius:4px;height:10px}
+.bars .fill{background:var(--accent);border-radius:4px;height:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px;color:var(--muted)}
+.pager button{font:inherit;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer}
+.empty{color:var(--muted);font-style:italic}
+footer{color:var(--muted);font-size:13px}
+footer li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>FedRAMP in SAM.gov</h1>
+  <p class="sub">How federal contract notices describe FedRAMP, FISMA, DoD impact levels and cloud requirements, for notices posted since FedRAMP 20x was announced (<span id="start"></span>). Updated weekly. <span id="gen"></span></p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="panel">
+    <h2>Opportunities per month, by strongest security language</h2>
+    <label class="tags"><input type="checkbox" id="showCloud"> include “Cloud/SaaS, no framework”</label>
+    <div class="chart" id="chart"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="panel">
+    <h2>New in the last 7 days</h2>
+    <div class="tablewrap" id="newtable"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Open now</h2>
+    <p class="tags" style="margin-top:-6px">Opportunities citing FedRAMP, DoD IL or FISMA whose response deadline hasn't passed (based on today's date in your browser).</p>
+    <div class="tablewrap" id="opentable"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel"><h2>FedRAMP levels named</h2><div class="bars" id="levels"></div></section>
+    <section class="panel"><h2>Words used with “FedRAMP”</h2><div class="bars" id="status"></div></section>
+  </div>
+
+  <section class="panel">
+    <h2>Explore all opportunities</h2>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search title, agency, solicitation #, snippet…" size="34">
+      <select id="fBucket"><option value="">All categories</option></select>
+      <select id="fAgency"><option value="">All agencies</option></select>
+      <select id="fType"><option value="">All notice types</option></select>
+      <label><input type="checkbox" id="fIT"> IT NAICS/PSC only</label>
+      <label><input type="checkbox" id="fDfars"> hide DFARS-clause-only non-IT</label>
+    </div>
+    <div class="tablewrap" id="alltable"></div>
+    <div class="pager" id="pager"></div>
+  </section>
+
+  <footer class="panel">
+    <h2>How this works</h2>
+    <ul>
+      <li>Source: SAM.gov's public Contract Opportunities bulk data (current file plus fiscal-year archives), downloaded weekly. <a href="data.json">data.json</a> · <a href="https://github.com/khanssen/sam-fedramp-tracker/blob/main/data/notices.csv">notices.csv</a> · <a href="https://github.com/khanssen/sam-fedramp-tracker">source</a></li>
+      <li>Only the notice <b>title and description text</b> are searched. Requirements that appear only in attachments (PWS, SOW, RFP PDFs) are not captured, so counts are a floor.</li>
+      <li>Classification is keyword-based. Each opportunity gets its most specific category: FedRAMP 20x &gt; FedRAMP with a level &gt; FedRAMP &gt; DoD IL &gt; FISMA level &gt; StateRAMP/GovRAMP &gt; FISMA &gt; cloud/SaaS with no framework. Mentions like “point cloud” or “cloud cover” are excluded.</li>
+      <li>Amendments and reposts are grouped into one opportunity by solicitation number and agency. Monthly counts use the first posted date.</li>
+      <li>“DFARS clause” marks notices citing DFARS 252.239-7010/7009 (DoD cloud computing). Some non-IT purchases include it as boilerplate.</li>
+      <li>Not affiliated with GSA, FedRAMP or SAM.gov. Always check the notice on SAM.gov.</li>
+    </ul>
+  </footer>
+</main>
+<script>
+(async function(){
+  const COLORS={"FedRAMP 20x":"var(--b0)","FedRAMP + level":"var(--b1)","FedRAMP (no level)":"var(--b2)","DoD IL only":"var(--b3)",
+    "FISMA level only":"var(--b4)","StateRAMP/GovRAMP only":"var(--b5)","FISMA (no level) only":"var(--b6)","Cloud/SaaS, no framework":"var(--b7)"};
+  const SIG=b=>b!=="Cloud/SaaS, no framework";
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const pill=b=>`<span class="pill" style="background:${COLORS[b]};${b==="Cloud/SaaS, no framework"||b==="FISMA (no level) only"?"color:var(--ink)":""}">${esc(b)}</span>`;
+  const ss=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}, sg=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+
+  const data=await (await fetch("data.json",{cache:"no-cache"})).json();
+  const B=data.buckets, rank=Object.fromEntries(B.map((b,i)=>[b,i]));
+  const notices=data.rows.map(r=>Object.fromEntries(data.fields.map((f,i)=>[f,r[i]])));
+  document.getElementById("start").textContent=data.startDate;
+  document.getElementById("gen").textContent="Data generated "+data.generated.replace("T"," ").replace("+00:00"," UTC")+".";
+
+  // group notices into opportunities
+  const opps=new Map();
+  for(const n of notices){
+    let o=opps.get(n.OpportunityKey);
+    if(!o){o={key:n.OpportunityKey,notices:[],bucket:n.Bucket,first:n.PostedDate,latest:n};opps.set(n.OpportunityKey,o)}
+    o.notices.push(n);
+    if(rank[n.Bucket]<rank[o.bucket])o.bucket=n.Bucket;
+    if(n.PostedDate<o.first)o.first=n.PostedDate;
+    if(n.PostedDate>=o.latest.PostedDate)o.latest=n;
+  }
+  for(const o of opps.values()){
+    const u=f=>[...new Set(o.notices.flatMap(n=>(n[f]||"").split(";").filter(Boolean)))].sort();
+    o.levels=u("FedRAMPLevels");o.status=u("FedRAMPStatusWords");o.il=u("DoDIL");o.fisma=u("FISMALevels");
+    o.due=o.notices.map(n=>n.ResponseDeadLine).filter(Boolean).sort().pop()||"";
+    o.it=o.notices.some(n=>n.IT==="Y");o.dfars=o.notices.some(n=>n.DFARSCloudClause==="Y");
+    o.snip=(o.notices.find(n=>n.Bucket===o.bucket)||o.latest).Snippet;
+  }
+  const all=[...opps.values()].sort((a,b)=>b.latest.PostedDate.localeCompare(a.latest.PostedDate));
+  const today=new Date().toISOString().slice(0,10);
+
+  // KPIs
+  const fr=all.filter(o=>o.bucket.startsWith("FedRAMP"));
+  const kp=[[all.filter(o=>SIG(o.bucket)).length,"opportunities citing FedRAMP, IL or FISMA"],[fr.length,"cite FedRAMP"],
+    [all.filter(o=>o.bucket==="FedRAMP + level").length+all.filter(o=>o.bucket==="FedRAMP 20x"&&o.levels.length).length,"name a FedRAMP level"],
+    [all.filter(o=>o.bucket==="FedRAMP 20x").length,"mention FedRAMP 20x"],
+    [all.filter(o=>SIG(o.bucket)&&o.due>=today).length,"open now"],[all.length,"all cloud-related opportunities"]];
+  document.getElementById("kpis").innerHTML=kp.map(([v,l])=>`<div class="kpi"><div class="v">${v.toLocaleString()}</div><div class="l">${l}</div></div>`).join("");
+
+  // chart
+  const showCloud=document.getElementById("showCloud");showCloud.checked=sg("showCloud")==="1";
+  function drawChart(){
+    const bs=B.filter(b=>showCloud.checked||SIG(b));
+    const months=[];let d=new Date(data.startDate.slice(0,7)+"-01T00:00:00Z");const end=new Date(today.slice(0,7)+"-01T00:00:00Z");
+    while(d<=end){months.push(d.toISOString().slice(0,7));d.setUTCMonth(d.getUTCMonth()+1)}
+    const c=Object.fromEntries(months.map(m=>[m,Object.fromEntries(bs.map(b=>[b,0]))]));
+    for(const o of all){const m=o.first.slice(0,7);if(c[m]&&c[m][o.bucket]!==undefined)c[m][o.bucket]++}
+    const max=Math.max(1,...months.map(m=>bs.reduce((s,b)=>s+c[m][b],0)));
+    const W=Math.max(640,months.length*44),H=260,pl=34,pb=26,bw=(W-pl)/months.length;
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${Math.min(W,640)}px" role="img" aria-label="Monthly opportunities by category">`;
+    const step=Math.pow(10,Math.floor(Math.log10(max)));const tick=max/step>5?step*2:step;
+    for(let t=0;t<=max;t+=tick){const y=H-pb-(H-pb-10)*t/max;s+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${t}</text>`}
+    months.forEach((m,i)=>{let y=H-pb;const x=pl+i*bw+bw*.15;
+      for(const b of bs){const v=c[m][b];if(!v)continue;const h=(H-pb-10)*v/max;y-=h;s+=`<rect x="${x}" y="${y}" width="${bw*.7}" height="${h}" fill="${COLORS[b]}"><title>${m} · ${b}: ${v}</title></rect>`}
+      if(i%2===0||months.length<14)s+=`<text x="${x+bw*.35}" y="${H-8}" text-anchor="middle">${m.slice(2).replace("-","/")}</text>`});
+    document.getElementById("chart").innerHTML=s+"</svg>";
+    document.getElementById("legend").innerHTML=bs.map(b=>`<span><i class="sw" style="background:${COLORS[b]}"></i>${esc(b)}</span>`).join("");
+  }
+  showCloud.onchange=()=>{ss("showCloud",showCloud.checked?"1":"0");drawChart()};drawChart();
+
+  const tags=o=>[o.levels.length?"FedRAMP "+o.levels.join("/"):"",o.status.join(", "),o.il.join(" "),o.fisma.length?"FISMA "+o.fisma.join("/"):"",o.dfars?"DFARS clause":""].filter(Boolean).join(" · ");
+  function table(rows,{snip=false}={}){
+    if(!rows.length)return `<p class="empty">Nothing here.</p>`;
+    return `<table><thead><tr><th>Category</th><th>Opportunity</th><th>Agency</th><th>Type</th><th>Posted</th><th>Due</th></tr></thead><tbody>`+
+      rows.map(o=>`<tr><td>${pill(o.bucket)}</td><td><a href="https://sam.gov/opp/${esc(o.latest.NoticeId)}/view" target="_blank" rel="noopener">${esc(o.latest.Title)}</a>
+      <div class="tags">${esc(o.latest.SolNumber)}${o.notices.length>1?` · ${o.notices.length} notices`:""}${tags(o)?" · "+esc(tags(o)):""}</div>
+      ${snip&&o.snip?`<div class="snip">…${esc(o.snip)}…</div>`:""}</td>
+      <td>${esc(o.latest.Agency)}${o.latest.SubTier&&o.latest.SubTier!==o.latest.Agency?`<div class="tags">${esc(o.latest.SubTier)}</div>`:""}</td><td>${esc(o.latest.Type)}</td><td class="n">${o.latest.PostedDate}</td><td class="n">${o.due||"—"}</td></tr>`).join("")+`</tbody></table>`;
+  }
+  const genDay=data.generated.slice(0,10),wk=new Date(new Date(genDay+"T00:00:00Z")-7*864e5).toISOString().slice(0,10);
+  document.getElementById("newtable").innerHTML=table(all.filter(o=>SIG(o.bucket)&&o.latest.PostedDate>=wk).sort((a,b)=>rank[a.bucket]-rank[b.bucket]),{snip:true});
+  document.getElementById("opentable").innerHTML=table(all.filter(o=>SIG(o.bucket)&&o.due>=today).sort((a,b)=>a.due.localeCompare(b.due)));
+
+  function bars(id,counts){const e=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const m=Math.max(1,...e.map(x=>x[1]));
+    document.getElementById(id).innerHTML=e.length?e.map(([k,v])=>`<div><span>${esc(k)}</span><span class="track"><span class="fill" style="display:block;width:${100*v/m}%"></span></span><span class="n">${v}</span></div>`).join(""):`<p class="empty">None yet.</p>`}
+  const cnt=f=>fr.flatMap(f).reduce((a,k)=>(a[k]=(a[k]||0)+1,a),{});
+  bars("levels",cnt(o=>o.levels));bars("status",cnt(o=>o.status));
+
+  // explorer
+  const $=id=>document.getElementById(id);
+  const fill=(id,vals)=>$(id).insertAdjacentHTML("beforeend",vals.map(v=>`<option>${esc(v)}</option>`).join(""));
+  fill("fBucket",B);fill("fAgency",[...new Set(all.map(o=>o.latest.Agency))].filter(Boolean).sort());fill("fType",[...new Set(all.map(o=>o.latest.Type))].filter(Boolean).sort());
+  let page=0;const PS=50;
+  function render(){
+    const q=$("q").value.trim().toLowerCase(),fb=$("fBucket").value,fa=$("fAgency").value,ft=$("fType").value,it=$("fIT").checked,nd=$("fDfars").checked;
+    const rows=all.filter(o=>(!fb||o.bucket===fb)&&(!fa||o.latest.Agency===fa)&&(!ft||o.latest.Type===ft)&&(!it||o.it)&&(!nd||o.it||!o.dfars||o.bucket==="FedRAMP 20x")&&
+      (!q||(o.latest.Title+" "+o.latest.Agency+" "+o.latest.SubTier+" "+o.latest.SolNumber+" "+o.snip).toLowerCase().includes(q)));
+    const pages=Math.max(1,Math.ceil(rows.length/PS));page=Math.min(page,pages-1);
+    $("alltable").innerHTML=table(rows.slice(page*PS,page*PS+PS),{snip:true});
+    $("pager").innerHTML=`${rows.length.toLocaleString()} opportunities · page ${page+1} of ${pages} <button id="pv" ${page?"":"disabled"}>Prev</button><button id="nx" ${page<pages-1?"":"disabled"}>Next</button>`;
+    $("pv").onclick=()=>{page--;render()};$("nx").onclick=()=>{page++;render()};
+  }
+  ["q","fBucket","fAgency","fType","fIT","fDfars"].forEach(id=>$(id).addEventListener("input",()=>{page=0;render()}));
+  render();
+})().catch(e=>{document.querySelector("main").insertAdjacentHTML("beforeend",`<p class="panel">Couldn't load data: ${String(e)}</p>`)});
+</script>
+</body>
+</html>
