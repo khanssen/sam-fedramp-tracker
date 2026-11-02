@@ -35,4 +35,9 @@ python scripts/update.py --force     # rewrite outputs even if nothing changed
 
 You can also run the workflow manually from the Actions tab (**Run workflow**).
 
+## License
+
+- **Code** (scripts, page, workflow): [MIT](LICENSE).
+- **Data** (`data/`, `docs/data.json`): the underlying notices are U.S. government works from SAM.gov and are in the public domain. The classifications added here are dedicated to the public domain under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+
 Not affiliated with GSA, FedRAMP or SAM.gov.
