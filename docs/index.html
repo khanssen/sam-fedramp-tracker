@@ -50,6 +50,16 @@ a{color:var(--accent)}
 .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px;color:var(--muted)}
 .pager button{font:inherit;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer}
 .empty{color:var(--muted);font-style:italic}
+.lede{font-size:17px;margin:0 0 14px;max-width:62em}
+.lede b{font-variant-numeric:tabular-nums}
+.window{border-color:var(--accent);border-width:1.5px}
+.window>h2{font-size:20px}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:650;margin:0 0 4px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:0 0 18px}
+.grid3 h3{font-size:14px;margin:0 0 8px}
+.kpis.in{margin:0 0 18px}
+.kpis.in .kpi{background:var(--bg)}
+td.r,th.r{text-align:right}
 footer{color:var(--muted);font-size:13px}
 footer li{margin:4px 0}
 </style>
@@ -57,15 +67,22 @@ footer li{margin:4px 0}
 <body>
 <main>
   <h1>FedRAMP in SAM.gov</h1>
-  <p class="sub">How federal contract notices describe FedRAMP, FISMA, DoD impact levels and cloud requirements, for notices posted since FedRAMP 20x was announced (<span id="start"></span>). Updated weekly. <span id="gen"></span></p>
+  <p class="sub">How federal contract notices describe FedRAMP, FISMA, DoD impact levels and cloud requirements. The top section covers notices posted once FedRAMP 20x could be obtained at Moderate; the rest covers everything since 20x was announced (<span id="start"></span>) for comparison. Updated weekly. <span id="gen"></span></p>
 
-  <div class="kpis" id="kpis"></div>
-
-  <section class="panel">
-    <h2>Opportunities per month, by strongest security language</h2>
-    <label class="tags"><input type="checkbox" id="showCloud"> include “Cloud/SaaS, no framework”</label>
-    <div class="chart" id="chart"></div>
-    <div class="legend" id="legend"></div>
+  <section class="panel window">
+    <p class="eyebrow">Post-20x</p>
+    <h2>Language going out since <span id="wstart"></span></h2>
+    <p class="tags" style="margin-top:-6px">FedRAMP opened the 20x Class B and Class C (Moderate) pipelines on <span class="wd"></span> (<a href="https://www.fedramp.gov/2026-06-25-propelling-change-fedramp-launches-consolidated-rules-for-2026/" target="_blank" rel="noopener">FedRAMP</a>). Before then, a notice could not reasonably ask for 20x at Moderate. Each opportunity here is classified only by the notices it posted on or after that date.</p>
+    <p class="lede" id="wlede"></p>
+    <div class="kpis in" id="wkpis"></div>
+    <div class="grid3">
+      <div><h3>Strongest language used</h3><div class="bars" id="wbuckets"></div></div>
+      <div><h3>Words used with “FedRAMP”</h3><div class="bars" id="wstatus"></div></div>
+      <div><h3>FedRAMP levels named</h3><div class="bars" id="wlevels"></div></div>
+    </div>
+    <h3 style="font-size:14px;margin:0 0 8px">Every opportunity citing FedRAMP, DoD IL or FISMA since <span class="wd"></span></h3>
+    <div class="tablewrap" id="wtable"></div>
+    <div class="pager" id="wpager"></div>
   </section>
 
   <section class="panel">
@@ -79,15 +96,35 @@ footer li{margin:4px 0}
     <div class="tablewrap" id="opentable"></div>
   </section>
 
+  <section class="panel">
+    <h2>Before and after: by FedRAMP milestone</h2>
+    <p class="tags" style="margin-top:-6px">Each boundary is a date FedRAMP published. An opportunity that posted notices in two periods counts in both, classified by what it said in each. Rates are per 30 days so periods of different lengths compare.</p>
+    <div class="tablewrap" id="periods"></div>
+  </section>
+
+  <section class="panel">
+    <h2>All-time totals since 20x was announced</h2>
+    <div class="kpis in" id="kpis"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Opportunities per month, by strongest security language</h2>
+    <p class="tags" style="margin-top:-6px">Dashed lines mark the milestones in the table above.</p>
+    <label class="tags"><input type="checkbox" id="showCloud"> include “Cloud/SaaS, no framework”</label>
+    <div class="chart" id="chart"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
   <div class="grid2">
-    <section class="panel"><h2>FedRAMP levels named</h2><div class="bars" id="levels"></div></section>
-    <section class="panel"><h2>Words used with “FedRAMP”</h2><div class="bars" id="status"></div></section>
+    <section class="panel"><h2>FedRAMP levels named (all time)</h2><div class="bars" id="levels"></div></section>
+    <section class="panel"><h2>Words used with “FedRAMP” (all time)</h2><div class="bars" id="status"></div></section>
   </div>
 
   <section class="panel">
     <h2>Explore all opportunities</h2>
     <div class="controls">
       <input type="search" id="q" placeholder="Search title, agency, solicitation #, snippet…" size="34">
+      <select id="fPeriod"><option value="">All periods</option></select>
       <select id="fBucket"><option value="">All categories</option></select>
       <select id="fAgency"><option value="">All agencies</option></select>
       <select id="fType"><option value="">All notice types</option></select>
@@ -104,7 +141,8 @@ footer li{margin:4px 0}
       <li>Source: SAM.gov's public Contract Opportunities bulk data (current file plus fiscal-year archives), downloaded weekly. <a href="data.json">data.json</a> · <a href="https://github.com/khanssen/sam-fedramp-tracker/blob/main/data/notices.csv">notices.csv</a> · <a href="https://github.com/khanssen/sam-fedramp-tracker">source</a></li>
       <li>Only the notice <b>title and description text</b> are searched. Requirements that appear only in attachments (PWS, SOW, RFP PDFs) are not captured, so counts are a floor.</li>
       <li>Classification is keyword-based. Each opportunity gets its most specific category: FedRAMP 20x &gt; FedRAMP with a level &gt; FedRAMP &gt; DoD IL &gt; FISMA level &gt; StateRAMP/GovRAMP &gt; FISMA &gt; cloud/SaaS with no framework. Mentions like “point cloud” or “cloud cover” are excluded.</li>
-      <li>Amendments and reposts are grouped into one opportunity by solicitation number and agency. Monthly counts use the first posted date.</li>
+      <li>Amendments and reposts are grouped into one opportunity by solicitation number and agency. Monthly counts use the first posted date. The post-20x section and the milestone table instead use the notices posted within each window, so an older opportunity that reposts with new language is counted by what it says now.</li>
+      <li>Milestones: CR26 launched 24 Jun 2026; 20x Class A (Low) pipeline opened 3 Aug; Class B and C (Moderate) pipelines opened 31 Aug; CR26 becomes mandatory 1 Jan 2027. Sources: <a href="https://www.fedramp.gov/2026-06-25-propelling-change-fedramp-launches-consolidated-rules-for-2026/">FedRAMP announcement</a>, <a href="https://preview.fedramp.gov/2026/reference/fedramp-certification/">CR26 FedRAMP Certification rules</a>. Solicitations are drafted weeks before they post, so expect a lag after each date.</li>
       <li>“DFARS clause” marks notices citing DFARS 252.239-7010/7009 (DoD cloud computing). Some non-IT purchases include it as boilerplate.</li>
       <li>Code: MIT. Data: public domain (U.S. government works; added classifications CC0). Not affiliated with GSA, FedRAMP or SAM.gov. Always check the notice on SAM.gov.</li>
     </ul>
@@ -125,33 +163,49 @@ footer li{margin:4px 0}
   document.getElementById("start").textContent=data.startDate;
   document.getElementById("gen").textContent="Data generated "+data.generated.replace("T"," ").replace("+00:00"," UTC")+".";
 
-  // group notices into opportunities
-  const opps=new Map();
-  for(const n of notices){
-    let o=opps.get(n.OpportunityKey);
-    if(!o){o={key:n.OpportunityKey,notices:[],bucket:n.Bucket,first:n.PostedDate,latest:n};opps.set(n.OpportunityKey,o)}
-    o.notices.push(n);
-    if(rank[n.Bucket]<rank[o.bucket])o.bucket=n.Bucket;
-    if(n.PostedDate<o.first)o.first=n.PostedDate;
-    if(n.PostedDate>=o.latest.PostedDate)o.latest=n;
-  }
-  for(const o of opps.values()){
-    const u=f=>[...new Set(o.notices.flatMap(n=>(n[f]||"").split(";").filter(Boolean)))].sort();
-    o.levels=u("FedRAMPLevels");o.status=u("FedRAMPStatusWords");o.il=u("DoDIL");o.fisma=u("FISMALevels");
-    o.due=o.notices.map(n=>n.ResponseDeadLine).filter(Boolean).sort().pop()||"";
-    o.it=o.notices.some(n=>n.IT==="Y");o.dfars=o.notices.some(n=>n.DFARSCloudClause==="Y");
-    o.snip=(o.notices.find(n=>n.Bucket===o.bucket)||o.latest).Snippet;
-  }
-  const all=[...opps.values()].sort((a,b)=>b.latest.PostedDate.localeCompare(a.latest.PostedDate));
-  const today=new Date().toISOString().slice(0,10);
+  // Milestones (fallback if data.json predates them)
+  const POST=data.post20x||"2026-08-31";
+  const PER=(data.periods||[{id:"pre",start:data.startDate,label:"Pre-rules",note:""},{id:"low",start:"2026-06-24",label:"Rules final, Low only",note:""},
+    {id:"bc",start:"2026-08-31",label:"20x Moderate obtainable",note:""},{id:"mand",start:"2027-01-01",label:"CR26 mandatory",note:""}]);
+  PER.forEach((p,i)=>p.end=PER[i+1]?PER[i+1].start:"9999-12-31");
+  const periodOf=d=>PER.find(p=>d>=p.start&&d<p.end);
+  const fmt=d=>new Date(d+"T00:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
+  const prevDay=d=>new Date(new Date(d+"T00:00:00Z")-864e5).toISOString().slice(0,10);
 
-  // KPIs
-  const fr=all.filter(o=>o.bucket.startsWith("FedRAMP"));
-  const kp=[[all.filter(o=>SIG(o.bucket)).length,"opportunities citing FedRAMP, IL or FISMA"],[fr.length,"cite FedRAMP"],
-    [all.filter(o=>o.bucket==="FedRAMP + level").length+all.filter(o=>o.bucket==="FedRAMP 20x"&&o.levels.length).length,"name a FedRAMP level"],
-    [all.filter(o=>o.bucket==="FedRAMP 20x").length,"mention FedRAMP 20x"],
-    [all.filter(o=>SIG(o.bucket)&&o.due>=today).length,"open now"],[all.length,"all cloud-related opportunities"]];
-  document.getElementById("kpis").innerHTML=kp.map(([v,l])=>`<div class="kpi"><div class="v">${v.toLocaleString()}</div><div class="l">${l}</div></div>`).join("");
+  // group notices into opportunities; bucket = strongest language among the notices given
+  function group(list){
+    const opps=new Map();
+    for(const n of list){
+      let o=opps.get(n.OpportunityKey);
+      if(!o){o={key:n.OpportunityKey,notices:[],bucket:n.Bucket,first:n.PostedDate,latest:n};opps.set(n.OpportunityKey,o)}
+      o.notices.push(n);
+      if(rank[n.Bucket]<rank[o.bucket])o.bucket=n.Bucket;
+      if(n.PostedDate<o.first)o.first=n.PostedDate;
+      if(n.PostedDate>=o.latest.PostedDate)o.latest=n;
+    }
+    for(const o of opps.values()){
+      const u=f=>[...new Set(o.notices.flatMap(n=>(n[f]||"").split(";").filter(Boolean)))].sort();
+      o.levels=u("FedRAMPLevels");o.status=u("FedRAMPStatusWords");o.il=u("DoDIL");o.fisma=u("FISMALevels");
+      o.due=o.notices.map(n=>n.ResponseDeadLine).filter(Boolean).sort().pop()||"";
+      o.it=o.notices.some(n=>n.IT==="Y");o.dfars=o.notices.some(n=>n.DFARSCloudClause==="Y");
+      o.snip=(o.notices.find(n=>n.Bucket===o.bucket)||o.latest).Snippet;
+      o.periods=new Set(o.notices.map(n=>(periodOf(n.PostedDate)||{}).id));
+    }
+    return [...opps.values()].sort((a,b)=>b.latest.PostedDate.localeCompare(a.latest.PostedDate));
+  }
+  const all=group(notices);
+  const today=new Date().toISOString().slice(0,10);
+  const genDay=data.generated.slice(0,10);
+  const stats=os=>{const sig=os.filter(o=>SIG(o.bucket)),fr=os.filter(o=>o.bucket.startsWith("FedRAMP"));
+    return {sig:sig.length,fr:fr.length,lvl:fr.filter(o=>o.levels.length).length,x:os.filter(o=>o.bucket==="FedRAMP 20x").length,
+      il:os.filter(o=>o.bucket==="DoD IL only").length,fisma:os.filter(o=>o.bucket.startsWith("FISMA")).length,open:sig.filter(o=>o.due>=today).length,all:os.length,frList:fr}};
+  const kpiHTML=kp=>kp.map(([v,l])=>`<div class="kpi"><div class="v">${v.toLocaleString()}</div><div class="l">${l}</div></div>`).join("");
+  const pct=(a,b)=>b?Math.round(100*a/b)+"%":"—";
+
+  // KPIs (all time)
+  const S=stats(all),fr=S.frList;
+  document.getElementById("kpis").innerHTML=kpiHTML([[S.sig,"opportunities citing FedRAMP, IL or FISMA"],[S.fr,"cite FedRAMP"],
+    [S.lvl,"name a FedRAMP level"],[S.x,"mention FedRAMP 20x"],[S.open,"open now"],[S.all,"all cloud-related opportunities"]]);
 
   // chart
   const showCloud=document.getElementById("showCloud");showCloud.checked=sg("showCloud")==="1";
@@ -169,6 +223,12 @@ footer li{margin:4px 0}
     months.forEach((m,i)=>{let y=H-pb;const x=pl+i*bw+bw*.15;
       for(const b of bs){const v=c[m][b];if(!v)continue;const h=(H-pb-10)*v/max;y-=h;s+=`<rect x="${x}" y="${y}" width="${bw*.7}" height="${h}" fill="${COLORS[b]}"><title>${m} · ${b}: ${v}</title></rect>`}
       if(i%2===0||months.length<14)s+=`<text x="${x+bw*.35}" y="${H-8}" text-anchor="middle">${m.slice(2).replace("-","/")}</text>`});
+    // milestone lines, placed proportionally within their month
+    PER.slice(1).forEach((p,pi)=>{const mi=months.indexOf(p.start.slice(0,7));if(mi<0)return;
+      const dim=new Date(Date.UTC(+p.start.slice(0,4),+p.start.slice(5,7),0)).getUTCDate();
+      const lx=pl+mi*bw+bw*(+p.start.slice(8,10)-1)/dim;
+      s+=`<line x1="${lx}" x2="${lx}" y1="4" y2="${H-pb}" stroke="var(--ink)" stroke-opacity=".55" stroke-dasharray="3 3"><title>${esc(fmt(p.start))}: ${esc(p.label)}</title></line>`+
+        `<text x="${lx-4}" y="${12+pi*13}" text-anchor="end" style="fill:var(--ink)">${esc(p.label)}</text>`});
     document.getElementById("chart").innerHTML=s+"</svg>";
     document.getElementById("legend").innerHTML=bs.map(b=>`<span><i class="sw" style="background:${COLORS[b]}"></i>${esc(b)}</span>`).join("");
   }
@@ -183,30 +243,66 @@ footer li{margin:4px 0}
       ${snip&&o.snip?`<div class="snip">…${esc(o.snip)}…</div>`:""}</td>
       <td>${esc(o.latest.Agency)}${o.latest.SubTier&&o.latest.SubTier!==o.latest.Agency?`<div class="tags">${esc(o.latest.SubTier)}</div>`:""}</td><td>${esc(o.latest.Type)}</td><td class="n">${o.latest.PostedDate}</td><td class="n">${o.due||"—"}</td></tr>`).join("")+`</tbody></table>`;
   }
-  const genDay=data.generated.slice(0,10),wk=new Date(new Date(genDay+"T00:00:00Z")-7*864e5).toISOString().slice(0,10);
+  function bars(id,counts,{color}={}){const e=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const m=Math.max(1,...e.map(x=>x[1]));
+    document.getElementById(id).innerHTML=e.length?e.map(([k,v])=>`<div><span>${esc(k)}</span><span class="track"><span class="fill" style="display:block;width:${100*v/m}%;${color?`background:${color(k)}`:""}"></span></span><span class="n">${v}</span></div>`).join(""):`<p class="empty">None.</p>`}
+  const tally=(os,f)=>os.flatMap(f).reduce((a,k)=>(a[k]=(a[k]||0)+1,a),{});
+
+  // ---- Post-20x window: classified only by notices posted on/after POST ----
+  const win=group(notices.filter(n=>n.PostedDate>=POST)), W=stats(win), wsig=win.filter(o=>SIG(o.bucket));
+  document.getElementById("wstart").textContent=fmt(POST);
+  document.querySelectorAll(".wd").forEach(e=>e.textContent=fmt(POST));
+  const lastPosted=notices.reduce((m,n)=>n.PostedDate>m?n.PostedDate:m,"");
+  document.getElementById("wlede").innerHTML=`From ${esc(fmt(POST))} to ${esc(fmt(lastPosted))}, <b>${W.sig}</b> opportunities posted notices citing FedRAMP, DoD IL or FISMA. `+
+    `<b>${W.fr}</b> cited FedRAMP, and <b>${W.lvl}</b> of those named a level. `+
+    (W.x?`<b>${W.x}</b> mentioned FedRAMP 20x.`:`<b>None</b> mentioned FedRAMP 20x.`);
+  document.getElementById("wkpis").innerHTML=kpiHTML([[W.sig,"citing FedRAMP, IL or FISMA"],[W.fr,"cite FedRAMP"],[W.lvl,"name a FedRAMP level"],
+    [W.x,"mention FedRAMP 20x"],[W.il,"DoD IL, no FedRAMP"],[W.fisma,"FISMA, no FedRAMP"]]);
+  bars("wbuckets",tally(wsig,o=>[o.bucket]),{color:k=>COLORS[k]});
+  bars("wstatus",tally(win.filter(o=>o.bucket.startsWith("FedRAMP")),o=>o.status));
+  bars("wlevels",tally(win.filter(o=>o.bucket.startsWith("FedRAMP")),o=>o.levels));
+  let wpage=0;const WPS=25;
+  const wrows=wsig.slice().sort((a,b)=>rank[a.bucket]-rank[b.bucket]||b.latest.PostedDate.localeCompare(a.latest.PostedDate));
+  function renderW(){const pages=Math.max(1,Math.ceil(wrows.length/WPS));
+    document.getElementById("wtable").innerHTML=table(wrows.slice(wpage*WPS,wpage*WPS+WPS),{snip:true});
+    document.getElementById("wpager").innerHTML=pages>1?`${wrows.length} opportunities · page ${wpage+1} of ${pages} <button id="wpv" ${wpage?"":"disabled"}>Prev</button><button id="wnx" ${wpage<pages-1?"":"disabled"}>Next</button>`:"";
+    if(pages>1){document.getElementById("wpv").onclick=()=>{wpage--;renderW()};document.getElementById("wnx").onclick=()=>{wpage++;renderW()}}}
+  renderW();
+
+  // ---- Milestone comparison ----
+  const prow=PER.filter(p=>p.start<=genDay).map(p=>{
+    const os=group(notices.filter(n=>n.PostedDate>=p.start&&n.PostedDate<p.end)),st=stats(os);
+    const lastDay=p.end<=genDay?prevDay(p.end):genDay;
+    const days=Math.max(1,Math.round((new Date(lastDay)-new Date(p.start))/864e5)+1);
+    return {p,st,days,lastDay}});
+  const pend=PER.filter(p=>p.start>genDay);
+  document.getElementById("periods").innerHTML=`<table><thead><tr><th>Period</th><th>Dates</th><th class="r">Citing FedRAMP, IL or FISMA</th><th class="r">Per 30 days</th><th class="r">Cite FedRAMP</th><th class="r">…naming a level</th><th class="r">Mention 20x</th></tr></thead><tbody>`+
+    prow.map(({p,st,days,lastDay})=>`<tr${p.start===POST?' style="font-weight:600"':""}><td>${p.source?`<a href="${esc(p.source)}" target="_blank" rel="noopener">${esc(p.label)}</a>`:esc(p.label)}${p.note?`<div class="tags" style="font-weight:400">${esc(p.note)}</div>`:""}</td>`+
+      `<td class="n">${esc(fmt(p.start))} – ${esc(fmt(lastDay))}${p.end>genDay?" (so far)":""}</td><td class="n r">${st.sig}</td><td class="n r">${(st.sig*30/days).toFixed(1)}</td>`+
+      `<td class="n r">${st.fr} <span class="tags">(${pct(st.fr,st.sig)})</span></td><td class="n r">${st.lvl} <span class="tags">(${pct(st.lvl,st.fr)})</span></td><td class="n r">${st.x}</td></tr>`).join("")+
+    pend.map(p=>`<tr><td>${esc(p.label)}${p.note?`<div class="tags">${esc(p.note)}</div>`:""}</td><td class="n">from ${esc(fmt(p.start))}</td><td colspan="5" class="empty">Not started.</td></tr>`).join("")+`</tbody></table>`;
+
+  const wk=new Date(new Date(genDay+"T00:00:00Z")-7*864e5).toISOString().slice(0,10);
   document.getElementById("newtable").innerHTML=table(all.filter(o=>SIG(o.bucket)&&o.latest.PostedDate>=wk).sort((a,b)=>rank[a.bucket]-rank[b.bucket]),{snip:true});
   document.getElementById("opentable").innerHTML=table(all.filter(o=>SIG(o.bucket)&&o.due>=today).sort((a,b)=>a.due.localeCompare(b.due)));
 
-  function bars(id,counts){const e=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const m=Math.max(1,...e.map(x=>x[1]));
-    document.getElementById(id).innerHTML=e.length?e.map(([k,v])=>`<div><span>${esc(k)}</span><span class="track"><span class="fill" style="display:block;width:${100*v/m}%"></span></span><span class="n">${v}</span></div>`).join(""):`<p class="empty">None yet.</p>`}
-  const cnt=f=>fr.flatMap(f).reduce((a,k)=>(a[k]=(a[k]||0)+1,a),{});
-  bars("levels",cnt(o=>o.levels));bars("status",cnt(o=>o.status));
+  bars("levels",tally(fr,o=>o.levels));bars("status",tally(fr,o=>o.status));
 
   // explorer
   const $=id=>document.getElementById(id);
   const fill=(id,vals)=>$(id).insertAdjacentHTML("beforeend",vals.map(v=>`<option>${esc(v)}</option>`).join(""));
+  $("fPeriod").insertAdjacentHTML("beforeend",PER.filter(p=>p.start<=genDay).map(p=>`<option value="${esc(p.id)}">${esc(p.label)} (from ${esc(fmt(p.start))})</option>`).join(""));
   fill("fBucket",B);fill("fAgency",[...new Set(all.map(o=>o.latest.Agency))].filter(Boolean).sort());fill("fType",[...new Set(all.map(o=>o.latest.Type))].filter(Boolean).sort());
   let page=0;const PS=50;
   function render(){
-    const q=$("q").value.trim().toLowerCase(),fb=$("fBucket").value,fa=$("fAgency").value,ft=$("fType").value,it=$("fIT").checked,nd=$("fDfars").checked;
-    const rows=all.filter(o=>(!fb||o.bucket===fb)&&(!fa||o.latest.Agency===fa)&&(!ft||o.latest.Type===ft)&&(!it||o.it)&&(!nd||o.it||!o.dfars||o.bucket==="FedRAMP 20x")&&
+    const q=$("q").value.trim().toLowerCase(),fp=$("fPeriod").value,fb=$("fBucket").value,fa=$("fAgency").value,ft=$("fType").value,it=$("fIT").checked,nd=$("fDfars").checked;
+    const rows=all.filter(o=>(!fp||o.periods.has(fp))&&(!fb||o.bucket===fb)&&(!fa||o.latest.Agency===fa)&&(!ft||o.latest.Type===ft)&&(!it||o.it)&&(!nd||o.it||!o.dfars||o.bucket==="FedRAMP 20x")&&
       (!q||(o.latest.Title+" "+o.latest.Agency+" "+o.latest.SubTier+" "+o.latest.SolNumber+" "+o.snip).toLowerCase().includes(q)));
     const pages=Math.max(1,Math.ceil(rows.length/PS));page=Math.min(page,pages-1);
     $("alltable").innerHTML=table(rows.slice(page*PS,page*PS+PS),{snip:true});
     $("pager").innerHTML=`${rows.length.toLocaleString()} opportunities · page ${page+1} of ${pages} <button id="pv" ${page?"":"disabled"}>Prev</button><button id="nx" ${page<pages-1?"":"disabled"}>Next</button>`;
     $("pv").onclick=()=>{page--;render()};$("nx").onclick=()=>{page++;render()};
   }
-  ["q","fBucket","fAgency","fType","fIT","fDfars"].forEach(id=>$(id).addEventListener("input",()=>{page=0;render()}));
+  ["q","fPeriod","fBucket","fAgency","fType","fIT","fDfars"].forEach(id=>$(id).addEventListener("input",()=>{page=0;render()}));
   render();
 })().catch(e=>{document.querySelector("main").insertAdjacentHTML("beforeend",`<p class="panel">Couldn't load data: ${String(e)}</p>`)});
 </script>

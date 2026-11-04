@@ -24,6 +24,24 @@ import sys
 import urllib.request
 
 START_DATE = "2025-03-24"  # FedRAMP 20x announced
+
+# Analysis periods. Every boundary is a date FedRAMP published; none is a judgment call.
+# A period runs from its start up to (not including) the next period's start.
+PERIODS = [
+    {"id": "pre", "start": START_DATE, "label": "Pre-rules",
+     "note": "20x exists only as a pilot",
+     "source": "https://www.fedramp.gov/2026-06-25-propelling-change-fedramp-launches-consolidated-rules-for-2026/"},
+    {"id": "low", "start": "2026-06-24", "label": "Rules final, Low only",
+     "note": "CR26 launched 24 Jun; 20x obtainable at Low (Class A pipeline opened 3 Aug)",
+     "source": "https://preview.fedramp.gov/2026/reference/fedramp-certification/"},
+    {"id": "bc", "start": "2026-08-31", "label": "20x Moderate obtainable",
+     "note": "20x Class B and Class C pipelines open 31 Aug",
+     "source": "https://www.fedramp.gov/2026-06-25-propelling-change-fedramp-launches-consolidated-rules-for-2026/"},
+    {"id": "mand", "start": "2027-01-01", "label": "CR26 mandatory",
+     "note": "CR26 mandatory for all stakeholders 1 Jan 2027",
+     "source": "https://preview.fedramp.gov/2026/reference/fedramp-certification/"},
+]
+POST_20X = "2026-08-31"  # headline window: language going out once 20x Moderate could be obtained
 BASE = "https://sam.gov/api/prod/fileextractservices/v1/api/download/Contract%20Opportunities"
 CURRENT_URL = f"{BASE}/datagov/ContractOpportunitiesFullCSV.csv?privacy=Public"
 ARCHIVE_URL = BASE + "/Archived%20Data/FY{fy}_archived_opportunities.csv?privacy=Public"
@@ -220,6 +238,8 @@ def main():
     payload = {
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes"),
         "startDate": START_DATE,
+        "post20x": POST_20X,
+        "periods": PERIODS,
         "buckets": BUCKETS,
         "fields": keys,
         "rows": [[r.get(k, "") for k in keys] for r in rows],
